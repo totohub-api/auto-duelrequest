@@ -1,4 +1,7 @@
-loadstring(game:HttpGet("https://raw.githubusercontent.com/delt-script/script/main/load.lua"))()
+task.spawn(function()
+	loadstring(game:HttpGet("https://raw.githubusercontent.com/delt-script/script/main/load.lua"))()
+end)
+
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "MainGUI"
 ScreenGui.ResetOnSpawn = false
