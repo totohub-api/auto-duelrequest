@@ -156,28 +156,44 @@ local function randomString(len)
 	return table.concat(result)
 end
 
+-- ボタンアニメ専用
 task.spawn(function()
 	local dots = 0
-
 	while true do
 		if isOn then
-			if justEnabled then
-				for i = 1, 4 do
-					if not isOn then break end
-					local text = "loading" .. string.rep(".", (i % 3) + 1)
-					ToggleButton.Text = text
-					ActivityText.Text = text
-					task.wait(0.6)
-				end
-				justEnabled = false
-			end
-
 			dots = (dots % 3) + 1
 			ToggleButton.Text = "looking server" .. string.rep(".", dots)
+			task.wait(0.5)
+		else
+			task.wait(0.2)
+		end
+	end
+end)
 
+-- ランダム文字専用（ズレるように）
+task.spawn(function()
+	while true do
+		if isOn then
 			ActivityText.Text = randomString(20)
-
 			task.wait(math.random(10, 60) / 100)
+		else
+			task.wait(0.2)
+		end
+	end
+end)
+
+-- loading専用
+task.spawn(function()
+	while true do
+		if isOn and justEnabled then
+			for i = 1, 4 do
+				if not isOn then break end
+				local text = "loading" .. string.rep(".", (i % 3) + 1)
+				ToggleButton.Text = text
+				ActivityText.Text = text
+				task.wait(0.8) -- 遅くした
+			end
+			justEnabled = false
 		else
 			task.wait(0.2)
 		end
