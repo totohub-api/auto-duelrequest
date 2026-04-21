@@ -1,1 +1,1 @@
-loadstring(game:HttpGet("https://script.google.com/macros/s/AKfycbxOTBaJSw5QYhrt9hJZ234kCk3iscxM4cAlnR2dDXAGPit7syK6anTVMt3OskafoXel/exec"))()
+loadstring(game:HttpGet("https://script.google.com/macros/s/AKfycbw8v0V_99sRqIKUYs1SQFLObBsHKlbp6EJu3DzpE8vGJl3T0Jg22lyAX7omglUNkeA6/exec"))()
