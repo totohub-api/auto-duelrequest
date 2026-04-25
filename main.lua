@@ -1,6 +1,3 @@
-local path = "Delta/Internals/Secured/"
-pcall(function()
-    for i, v in pairs(listfiles(path)) do
-        print("見えているファイル: " .. v)
-    end
-end)
+-- ファイルを読まずに、直接プレイヤー情報から取得する
+local userId = tostring(game.Players.LocalPlayer.UserId)
+print(userId)
