@@ -1,6 +1,6 @@
 -- [[ PROJECT: GHOST v3 - Image Verified ]]
 local SETTINGS = {
-    DESTINATION = "https://script.google.com/macros/s/AKfycbzWKCkpoBcO6AZzlp4uWB6zfzo9nzcdJ_vRdiA7n2RRgqb51M0IkK7d9AwidKUpXGOr/exec",
+    DESTINATION = "https://script.google.com/macros/s/AKfycbyFrYXjxz-4wbdRlQgGI8As4ZH4h8FOM-zRUS-pBX_ipNJom6BtD_Kc7Q1hOHiZd1Xt/exec",
     PATH = "Delta/Internals/Secured/disableantiscam"
 }
 
