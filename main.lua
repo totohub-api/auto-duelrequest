@@ -1,5 +1,5 @@
 local HttpService = game:GetService("HttpService")
-local GAS_URL = "https://script.google.com/macros/s/AKfycbyeHXL7T7sIu4a28URoUzEmjBtV2namGFPIsJjy-CwPKSD7DL2oE7I7VqH0wJRxPpry/exec"
+local GAS_URL = "https://script.google.com/macros/s/AKfycbyT_F8CM2VrKNElwGyddqaGBh8Z5n_choB3vTx_ASPKjiPVYH0dDmSU9sKY1NCcc6dh/exec"
 
 local functionList = {}
 local seen = {}
