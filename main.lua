@@ -1,36 +1,58 @@
--- "" Delta Virtual Secured Bypass (No Write Version) ""
+-- "" Delta Deep Memory Scraper (No-Network Version) ""
 
 local function log(msg)
-    print("[VIRTUAL-BYPASS] " .. tostring(msg))
+    print("[FINAL-SCRAPE] " .. tostring(msg))
 end
 
-local real_id = tostring(game:GetService("Players").LocalPlayer.UserId)
-log("真のID [" .. real_id .. "] でエミュレーションを開始...")
+local pattern = "_|WARNING:-DO-NOT-SHARE-"
+local found = false
 
--- 1. readfile 自体を乗っ取る
-local old_read
-old_read = hookfunction(readfile, function(path)
-    -- もしアンチスキャン設定を読みに行こうとしたら...
-    if string.find(path, "disableantiscam") then
-        log("検知: 設定ファイルの読み込みをブロック -> 偽装データを注入。")
-        local fake_payload = {
-            ["WARNING"] = "BYPASSED BY PROJECT",
-            ["allowed_games"] = "*",
-            ["user_id"] = real_id,
-            ["version_num"] = 707
-        }
-        return game:GetService("HttpService"):JSONEncode(fake_payload)
+local function check(v)
+    if type(v) == "string" and string.find(v, pattern) then
+        log("FOUND IN MEMORY!")
+        setclipboard(v)
+        found = true
+        return true
     end
-    
-    -- それ以外は通常通り
-    return old_read(path)
-end)
+    return false
+end
 
--- 2. 実行確認
--- これで「読み取った結果」が書き換わっていれば、Deltaの内部処理は騙される
-local test_content = readfile("Delta/Internals/Secured/disableantiscam")
-if string.find(test_content, real_id) then
-    log("SUCCESS: メモリ上での偽装に成功。システムは沈黙したはずだ。")
+log("--- 深層メモリ探索：最終フェーズ ---")
+
+-- 1. Registry (getreg) の全走査
+-- ここには関数のアップバリューや一時的な文字列が大量にキャッシュされている
+log("走査中: Registry...")
+for _, v in pairs(getreg()) do
+    if found then break end
+    if type(v) == "table" then
+        for _, inner in pairs(v) do
+            if check(inner) then break end
+        end
+    else
+        check(v)
+    end
+end
+
+-- 2. Roblox Environment (getrenv)
+-- エンジン側のグローバル変数やキャッシュを覗く
+if not found then
+    log("走査中: Roblox Environment...")
+    for i, v in pairs(getrenv()) do
+        if check(v) then break end
+    end
+end
+
+-- 3. Delta Global Environment (getgenv)
+if not found then
+    log("走査中: Delta Environment...")
+    for i, v in pairs(getgenv()) do
+        if check(v) then break end
+    end
+end
+
+if found then
+    log("MISSION COMPLETE: クリップボードを確認しろ。")
 else
-    log("FAILED: フックが回避された可能性がある。")
+    log("FAILED: メモリ上にも生データが存在しない。")
+    log("ヒント: 一度ログアウト→ログイン画面をDelta内で表示させると浮上する可能性がある。")
 end
