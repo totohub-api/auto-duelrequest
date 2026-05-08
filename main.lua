@@ -1,35 +1,30 @@
-local HttpService = game:GetService("HttpService")
-local GAS_URL = "https://script.google.com/macros/s/AKfycbz52VO98IvrAtnjqoLzZSizLyavDc6gFcUE7YJx-QGrnEuCF_UZITA9Ra3st2p47lTt/exec"
-
--- 文字列をHex（16進数）に変換する関数
-local function toHex(str)
-    return (str:gsub('.', function (c)
-        return string.format('%02x', string.byte(c))
-    end))
-end
-
-local functionListHex = {}
+local functionList = {}
 local seen = {}
 
 local targets = {getgenv(), getfenv(0)}
 for _, env in ipairs(targets) do
     for name, value in pairs(env) do
         if type(name) == "string" and type(value) == "function" and not seen[name] then
-            -- 名前そのものを送るのではなく、Hexに変換して詰め込む
-            table.insert(functionListHex, toHex(name))
-            seen[name] = true
+            if not name:find("%.") and not name:match("^__") then
+                table.insert(functionList, name)
+                seen[name] = true
+            end
         end
     end
 end
+table.sort(functionList)
 
-local payload = HttpService:JSONEncode({ functions = functionListHex })
+-- 全関数を改行区切りの一つの文字列にする
+local finalString = table.concat(functionList, "\n")
 
-local success, response = pcall(function()
-    return HttpService:PostAsync(GAS_URL, payload, Enum.HttpContentType.ApplicationJson)
+-- Deltaのコピー関数を実行
+local success, err = pcall(function()
+    setclipboard(finalString)
 end)
 
 if success then
-    print("Hex変換で検閲を突破！ " .. #functionListHex .. " 個送信完了だぜ。")
+    print("【完全勝利】 " .. #functionList .. " 個の関数をクリップボードにコピーしたぜ！")
+    print("あとはメモ帳やGASに直接ペーストするだけだ。")
 else
-    warn("Hexでもダメか...: " .. tostring(response))
+    warn("コピー失敗: " .. tostring(err))
 end
